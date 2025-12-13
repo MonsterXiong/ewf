@@ -1,0 +1,42 @@
+{
+  "kind": "ewf.ir",
+  "irVersion": "1.0",
+  "workflowId": "wf_wait_demo",
+  "workflowVersion": 1,
+  "triggers": [],
+  "policies": {},
+  "contracts": {},
+  "compiledAt": "2025-12-13T17:57:20.946Z",
+  "program": [
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_wait"
+    },
+    {
+      "op": "WAIT",
+      "id": "n_wait",
+      "eventKey": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "'ev:' & (vars.id ? vars.id : 'c001')"
+        }
+      },
+      "timeoutMs": 0
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_return",
+      "output": {
+        "ref": "steps.n_wait.output"
+      }
+    }
+  ]
+}

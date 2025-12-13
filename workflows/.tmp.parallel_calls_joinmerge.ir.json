@@ -1,0 +1,143 @@
+{
+  "kind": "ewf.ir",
+  "irVersion": "1.0",
+  "workflowId": "wf_parallel_calls_joinmerge",
+  "workflowVersion": 1,
+  "triggers": [],
+  "policies": {
+    "egress": {
+      "mode": "denyByDefault",
+      "allowConnectors": [
+        "conn_user_service",
+        "conn_risk_service"
+      ]
+    }
+  },
+  "contracts": {},
+  "compiledAt": "2025-12-13T17:57:21.423Z",
+  "program": [
+    {
+      "op": "LABEL",
+      "name": "L_NODE_p_fetch"
+    },
+    {
+      "op": "FORK_ALL",
+      "id": "p_fetch",
+      "mode": "parallel",
+      "branches": [
+        {
+          "name": "customer",
+          "from": "L_B_p_fetch_customer",
+          "to": "L_B_p_fetch_customer_END"
+        },
+        {
+          "name": "risk",
+          "from": "L_B_p_fetch_risk",
+          "to": "L_B_p_fetch_risk_END"
+        }
+      ],
+      "join": "L_NODE_n_join_merge"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_fetch_customer"
+    },
+    {
+      "op": "CALL",
+      "id": "n_get_customer",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_user_service",
+        "operationId": "GetCustomer"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'id': vars.id ? vars.id : 'c001' } }"
+        }
+      }
+    },
+    {
+      "op": "MERGE",
+      "id": "n_customer_out",
+      "into": "vars.__branch.customer",
+      "value": {
+        "ref": "steps.n_get_customer.output.body"
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_fetch_customer_END"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_fetch_risk"
+    },
+    {
+      "op": "CALL",
+      "id": "n_get_risk",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_risk_service",
+        "operationId": "GetRisk"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'id': vars.id ? vars.id : 'c001' } }"
+        }
+      }
+    },
+    {
+      "op": "MERGE",
+      "id": "n_risk_out",
+      "into": "vars.__branch.risk",
+      "value": {
+        "ref": "steps.n_get_risk.output.body"
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_fetch_risk_END"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_join_merge"
+    },
+    {
+      "op": "MERGE",
+      "id": "n_join_merge",
+      "into": "vars._enrich",
+      "value": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'customer': vars.__branch.customer, 'risk': vars.__branch.risk }"
+        }
+      }
+    },
+    {
+      "op": "SET_VARS",
+      "id": "n_join_merge_cleanup",
+      "set": {
+        "vars.__branch": {
+          "const": {}
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_return",
+      "output": {
+        "ref": "vars._enrich"
+      }
+    }
+  ]
+}

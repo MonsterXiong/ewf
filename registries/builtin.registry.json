@@ -1,0 +1,19 @@
+{
+  "kind": "ewf.registry",
+  "schemaVersion": "1.0",
+  "id": "builtin",
+  "version": "1.0",
+  "nodes": [
+    { "type": "connector.call", "typeVersion": 1, "flowKind": "sequential", "compile": { "kind": "ir.emit", "emitOp": "CALL" } },
+    { "type": "flow.transform", "typeVersion": 1, "flowKind": "sequential", "compile": { "kind": "ir.script", "scriptId": "builtin.transform.v1" } },
+    { "type": "flow.branchOutput", "typeVersion": 1, "flowKind": "sequential", "compile": { "kind": "ir.script", "scriptId": "builtin.branchOutput.v1" } },
+    { "type": "flow.joinMerge", "typeVersion": 1, "flowKind": "sequential", "compile": { "kind": "ir.script", "scriptId": "builtin.joinMerge.v1" } },
+
+    { "type": "flow.router", "typeVersion": 1, "flowKind": "router", "compile": { "kind": "ir.script", "scriptId": "builtin.router.v1" } },
+    { "type": "flow.parallelAll", "typeVersion": 1, "flowKind": "parallelAll", "compile": { "kind": "ir.script", "scriptId": "builtin.parallelAll.v1" } },
+
+    { "type":"flow.awaitEvent", "typeVersion":1, "flowKind":"sequential", "compile":{"kind":"ir.emit","emitOp":"WAIT"} },
+    { "type": "flow.return", "typeVersion": 1, "flowKind": "terminal", "compile": { "kind": "ir.emit", "emitOp": "RETURN" } },
+    { "type": "flow.slot", "typeVersion": 1, "flowKind": "sequential", "compile": { "kind": "ir.script", "scriptId": "builtin.slot.v1" } }
+  ]
+}

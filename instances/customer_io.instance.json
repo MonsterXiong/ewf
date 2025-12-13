@@ -1,0 +1,6 @@
+{
+  "params": {
+    "entity": "Customer",
+    "workflowId": "wf_customer_io"
+  }
+}

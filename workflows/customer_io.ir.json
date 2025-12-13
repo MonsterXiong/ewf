@@ -1,0 +1,195 @@
+{
+  "kind": "ewf.ir",
+  "irVersion": "1.0",
+  "workflowId": "wf_customer_io",
+  "workflowVersion": 1,
+  "triggers": [
+    {
+      "type": "http",
+      "method": "POST",
+      "path": "/internal/customer/io",
+      "input": {
+        "mapFrom": "body"
+      }
+    }
+  ],
+  "policies": {
+    "egress": {
+      "mode": "denyByDefault",
+      "allowConnectors": [
+        "conn_db",
+        "conn_file"
+      ]
+    }
+  },
+  "contracts": {},
+  "compiledAt": "2025-12-13T14:45:28.874Z",
+  "program": [
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_router"
+    },
+    {
+      "op": "IF",
+      "cond": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "vars.op='export'"
+        }
+      },
+      "then": "L_NODE_n_select_all",
+      "else": "L_ROUTER_n_router_ELSE_1"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_ROUTER_n_router_ELSE_1"
+    },
+    {
+      "op": "IF",
+      "cond": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "vars.op='import'"
+        }
+      },
+      "then": "L_NODE_n_parse_csv",
+      "else": "L_ROUTER_n_router_ELSE_2"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_ROUTER_n_router_ELSE_2"
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_bad_req"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_select_all"
+    },
+    {
+      "op": "CALL",
+      "id": "n_select_all",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_db",
+        "operationId": "SelectAll"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'table':'t_customer' } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_generate_csv"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_generate_csv"
+    },
+    {
+      "op": "CALL",
+      "id": "n_generate_csv",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_file",
+        "operationId": "GenerateCsv"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'rows': steps.n_select_all.output.body.items } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_export_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_export_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_export_return",
+      "output": {
+        "ref": "steps.n_generate_csv.output.body.csv"
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_parse_csv"
+    },
+    {
+      "op": "CALL",
+      "id": "n_parse_csv",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_file",
+        "operationId": "ParseCsv"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'csv': vars.csv } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_upsert_many"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_upsert_many"
+    },
+    {
+      "op": "CALL",
+      "id": "n_upsert_many",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_db",
+        "operationId": "UpsertMany"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'table':'t_customer','idField':'id','rows': steps.n_parse_csv.output.body.rows } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_import_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_import_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_import_return",
+      "output": {
+        "ref": "steps.n_upsert_many.output.body"
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_bad_req"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_bad_req",
+      "output": {
+        "const": {
+          "error": "bad_request",
+          "message": "op must be 'import' or 'export'"
+        }
+      }
+    }
+  ]
+}

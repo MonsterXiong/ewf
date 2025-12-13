@@ -1,0 +1,37 @@
+{
+  "kind": "ewf.workflow",
+  "schemaVersion": "1.0",
+  "id": "wf_risk_retry_demo",
+  "version": 1,
+  "policies": { "egress": { "mode": "denyByDefault", "allowConnectors": ["conn_risk_service"] } },
+  "triggers": [
+    { "type": "http", "method": "POST", "path": "/internal/risk/retry-demo", "input": { "mapFrom": "body" } }
+  ],
+  "graph": {
+    "start": { "nodeId": "n_get_risk", "port": "in" },
+    "nodes": [
+      {
+        "id": "n_get_risk",
+        "type": "connector.call",
+        "typeVersion": 1,
+        "inputs": {
+          "spec.connectorId": { "const": "conn_risk_service" },
+          "spec.operationId": { "const": "GetRisk" },
+          "inputs": { "expr": { "lang": "jsonata", "body": "{ 'body': { 'id': vars.id ? vars.id : 'c001' } }" } }
+        },
+        "config": {
+          "retry": {
+            "maxAttempts": 3,
+            "backoffMs": 10,
+            "backoffMultiplier": 1,
+            "retryOnStatus": [503]
+          }
+        }
+      },
+      { "id": "n_return", "type": "flow.return", "typeVersion": 1, "inputs": { "value": { "ref": "steps.n_get_risk.output.body" } } }
+    ],
+    "edges": [
+      { "from": { "nodeId": "n_get_risk", "port": "out" }, "to": { "nodeId": "n_return", "port": "in" } }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "kind":"ewf.workflow",
+  "schemaVersion":"1.0",
+  "id":"wf_fork_illegal_write",
+  "version":1,
+  "graph":{
+    "start":{"nodeId":"p","port":"in"},
+    "nodes":[
+      {
+        "id":"p",
+        "type":"flow.parallelAll",
+        "typeVersion":1,
+        "inputs":{"branches":{"const":[
+          {"name":"a","to":"n_bad"},
+          {"name":"b","to":"n_ok"}
+        ]}}
+      },
+
+      {
+        "id":"n_bad",
+        "type":"flow.transform",
+        "typeVersion":1,
+        "inputs":{
+          "merge":{"const":{"into":"vars.illegal","value":{"const":1}}}
+        }
+      },
+      {
+        "id":"n_ok",
+        "type":"flow.branchOutput",
+        "typeVersion":1,
+        "inputs":{"name":{"const":"b"},"value":{"const":2}}
+      },
+
+      {
+        "id":"n_join",
+        "type":"flow.joinMerge",
+        "typeVersion":1,
+        "inputs":{"branches":{"const":["a","b"]},"into":{"const":"vars._x"}}
+      },
+      { "id":"n_return","type":"flow.return","typeVersion":1, "inputs":{"value":{"ref":"vars._x"}} }
+    ],
+    "edges":[
+      {"from":{"nodeId":"p","port":"a"},"to":{"nodeId":"n_bad","port":"in"}},
+      {"from":{"nodeId":"p","port":"b"},"to":{"nodeId":"n_ok","port":"in"}},
+      {"from":{"nodeId":"n_bad","port":"out"},"to":{"nodeId":"n_join","port":"in"}},
+      {"from":{"nodeId":"n_ok","port":"out"},"to":{"nodeId":"n_join","port":"in"}},
+      {"from":{"nodeId":"n_join","port":"out"},"to":{"nodeId":"n_return","port":"in"}}
+    ]
+  }
+}

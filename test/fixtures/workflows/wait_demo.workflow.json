@@ -1,0 +1,24 @@
+{
+  "kind":"ewf.workflow",
+  "schemaVersion":"1.0",
+  "id":"wf_wait_demo",
+  "version":1,
+  "graph":{
+    "start":{"nodeId":"n_wait","port":"in"},
+    "nodes":[
+      {
+        "id":"n_wait",
+        "type":"flow.awaitEvent",
+        "typeVersion":1,
+        "inputs":{
+          "eventKey":{"expr":{"lang":"jsonata","body":"'ev:' & (vars.id ? vars.id : 'c001')"}},
+          "timeoutMs":{"const":0}
+        }
+      },
+      { "id":"n_return","type":"flow.return","typeVersion":1, "inputs":{"value":{"ref":"steps.n_wait.output"}} }
+    ],
+    "edges":[
+      {"from":{"nodeId":"n_wait","port":"out"},"to":{"nodeId":"n_return","port":"in"}}
+    ]
+  }
+}

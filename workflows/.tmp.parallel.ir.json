@@ -1,0 +1,118 @@
+{
+  "kind": "ewf.ir",
+  "irVersion": "1.0",
+  "workflowId": "wf_parallel_joinmerge_demo",
+  "workflowVersion": 1,
+  "triggers": [],
+  "policies": {
+    "egress": {
+      "mode": "denyByDefault",
+      "allowConnectors": [
+        "conn_db"
+      ]
+    }
+  },
+  "contracts": {},
+  "compiledAt": "2025-12-13T17:57:21.828Z",
+  "program": [
+    {
+      "op": "LABEL",
+      "name": "L_NODE_p_fetch"
+    },
+    {
+      "op": "FORK_ALL",
+      "id": "p_fetch",
+      "mode": "parallel",
+      "branches": [
+        {
+          "name": "a",
+          "from": "L_B_p_fetch_a",
+          "to": "L_B_p_fetch_a_END"
+        },
+        {
+          "name": "b",
+          "from": "L_B_p_fetch_b",
+          "to": "L_B_p_fetch_b_END"
+        }
+      ],
+      "join": "L_NODE_n_join_merge"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_fetch_a"
+    },
+    {
+      "op": "MERGE",
+      "id": "n_a",
+      "into": "vars.__branch.a",
+      "value": {
+        "const": {
+          "ok": true,
+          "v": 1
+        }
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_fetch_a_END"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_fetch_b"
+    },
+    {
+      "op": "MERGE",
+      "id": "n_b",
+      "into": "vars.__branch.b",
+      "value": {
+        "const": {
+          "ok": true,
+          "v": 2
+        }
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_fetch_b_END"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_join_merge"
+    },
+    {
+      "op": "MERGE",
+      "id": "n_join_merge",
+      "into": "vars._enrich",
+      "value": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'a': vars.__branch.a, 'b': vars.__branch.b }"
+        }
+      }
+    },
+    {
+      "op": "SET_VARS",
+      "id": "n_join_merge_cleanup",
+      "set": {
+        "vars.__branch": {
+          "const": {}
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_return",
+      "output": {
+        "ref": "vars._enrich"
+      }
+    }
+  ]
+}

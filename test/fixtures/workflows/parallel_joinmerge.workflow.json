@@ -1,0 +1,33 @@
+{
+  "kind":"ewf.workflow",
+  "schemaVersion":"1.0",
+  "id":"wf_parallel_joinmerge_demo",
+  "version":1,
+  "policies":{"egress":{"mode":"denyByDefault","allowConnectors":["conn_db"]}},
+  "graph":{
+    "start":{"nodeId":"p_fetch","port":"in"},
+    "nodes":[
+      { "id":"p_fetch","type":"flow.parallelAll","typeVersion":1,
+        "inputs":{"branches":{"const":[{"name":"a","to":"n_a"},{"name":"b","to":"n_b"}]}} },
+
+      { "id":"n_a","type":"flow.branchOutput","typeVersion":1,
+        "inputs":{"name":{"const":"a"},"value":{"const":{"ok":true,"v":1}}} },
+
+      { "id":"n_b","type":"flow.branchOutput","typeVersion":1,
+        "inputs":{"name":{"const":"b"},"value":{"const":{"ok":true,"v":2}}} },
+
+      { "id":"n_join_merge","type":"flow.joinMerge","typeVersion":1,
+        "inputs":{"branches":{"const":["a","b"]},"into":{"const":"vars._enrich"},"mergeStrategy":{"const":"setByKey"},"cleanup":{"const":true}} },
+
+      { "id":"n_return","type":"flow.return","typeVersion":1,
+        "inputs":{"value":{"ref":"vars._enrich"}} }
+    ],
+    "edges":[
+      {"from":{"nodeId":"p_fetch","port":"a"},"to":{"nodeId":"n_a","port":"in"}},
+      {"from":{"nodeId":"p_fetch","port":"b"},"to":{"nodeId":"n_b","port":"in"}},
+      {"from":{"nodeId":"n_a","port":"out"},"to":{"nodeId":"n_join_merge","port":"in"}},
+      {"from":{"nodeId":"n_b","port":"out"},"to":{"nodeId":"n_join_merge","port":"in"}},
+      {"from":{"nodeId":"n_join_merge","port":"out"},"to":{"nodeId":"n_return","port":"in"}}
+    ]
+  }
+}

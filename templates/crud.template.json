@@ -1,0 +1,101 @@
+{
+  "kind": "ewf.template",
+  "schemaVersion": "1.0",
+  "skeleton": {
+    "kind": "ewf.workflow",
+    "schemaVersion": "1.0",
+    "id": "{{workflowId}}",
+    "version": 1,
+    "policies": { "egress": { "mode": "denyByDefault", "allowConnectors": ["conn_db"] } },
+    "triggers": [
+      { "type": "http", "method": "POST", "path": "/internal/{{entityLower}}/crud", "input": { "mapFrom": "body" } }
+    ],
+    "graph": {
+      "start": { "nodeId": "n_router", "port": "in" },
+      "nodes": [
+        {
+          "id": "n_router",
+          "type": "flow.router",
+          "typeVersion": 1,
+          "inputs": {
+            "cases": { "const": [
+              { "when": { "expr": { "lang": "jsonata", "body": "vars.op='list'" } }, "to": "n_list_query" },
+              { "when": { "expr": { "lang": "jsonata", "body": "vars.op='get'" } }, "to": "n_get_query" },
+              { "when": { "expr": { "lang": "jsonata", "body": "vars.op='create'" } }, "to": "n_create" },
+              { "when": { "expr": { "lang": "jsonata", "body": "vars.op='update'" } }, "to": "n_update" },
+              { "when": { "const": true }, "to": "n_delete" }
+            ] }
+          }
+        },
+
+        {
+          "id": "n_list_query",
+          "type": "connector.call",
+          "typeVersion": 1,
+          "inputs": {
+            "spec.connectorId": { "const": "conn_db" },
+            "spec.operationId": { "const": "SelectPage" },
+            "inputs": { "expr": { "lang": "jsonata", "body": "{ 'body': { 'table':'t_customer','page': vars.page ? vars.page : 1,'pageSize': vars.pageSize ? vars.pageSize : 10,'filters': vars.filters ? vars.filters : {} } }" } }
+          }
+        },
+        { "id": "n_list_return", "type": "flow.return", "typeVersion": 1, "inputs": { "value": { "ref": "steps.n_list_query.output.body" } } },
+
+        {
+          "id": "n_get_query",
+          "type": "connector.call",
+          "typeVersion": 1,
+          "inputs": {
+            "spec.connectorId": { "const": "conn_db" },
+            "spec.operationId": { "const": "SelectById" },
+            "inputs": { "expr": { "lang": "jsonata", "body": "{ 'body': { 'table':'t_customer','idField':'id','id': vars.id } }" } }
+          }
+        },
+        { "id": "n_get_return", "type": "flow.return", "typeVersion": 1, "inputs": { "value": { "ref": "steps.n_get_query.output.body" } } },
+
+        {
+          "id": "n_create",
+          "type": "connector.call",
+          "typeVersion": 1,
+          "inputs": {
+            "spec.connectorId": { "const": "conn_db" },
+            "spec.operationId": { "const": "Insert" },
+            "inputs": { "expr": { "lang": "jsonata", "body": "{ 'body': { 'table':'t_customer', 'row': vars.row } }" } }
+          }
+        },
+        { "id": "n_create_return", "type": "flow.return", "typeVersion": 1, "inputs": { "value": { "ref": "steps.n_create.output.body" } } },
+
+        {
+          "id": "n_update",
+          "type": "connector.call",
+          "typeVersion": 1,
+          "inputs": {
+            "spec.connectorId": { "const": "conn_db" },
+            "spec.operationId": { "const": "UpdateById" },
+            "inputs": { "expr": { "lang": "jsonata", "body": "{ 'body': { 'table':'t_customer','idField':'id','id': vars.id, 'patch': vars.patch } }" } }
+          }
+        },
+        { "id": "n_update_return", "type": "flow.return", "typeVersion": 1, "inputs": { "value": { "ref": "steps.n_update.output.body" } } },
+
+        {
+          "id": "n_delete",
+          "type": "connector.call",
+          "typeVersion": 1,
+          "inputs": {
+            "spec.connectorId": { "const": "conn_db" },
+            "spec.operationId": { "const": "SoftDeleteById" },
+            "inputs": { "expr": { "lang": "jsonata", "body": "{ 'body': { 'table':'t_customer','idField':'id','id': vars.id } }" } }
+          }
+        },
+        { "id": "n_delete_return", "type": "flow.return", "typeVersion": 1, "inputs": { "value": { "ref": "steps.n_delete.output.body" } } }
+      ],
+      "edges": [
+        { "from": { "nodeId": "n_list_query", "port": "out" }, "to": { "nodeId": "n_list_return", "port": "in" } },
+        { "from": { "nodeId": "n_get_query", "port": "out" }, "to": { "nodeId": "n_get_return", "port": "in" } },
+        { "from": { "nodeId": "n_create", "port": "out" }, "to": { "nodeId": "n_create_return", "port": "in" } },
+        { "from": { "nodeId": "n_update", "port": "out" }, "to": { "nodeId": "n_update_return", "port": "in" } },
+        { "from": { "nodeId": "n_delete", "port": "out" }, "to": { "nodeId": "n_delete_return", "port": "in" } }
+      ]
+    }
+  },
+  "patches": []
+}

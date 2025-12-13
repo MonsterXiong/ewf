@@ -1,0 +1,266 @@
+{
+  "kind": "ewf.ir",
+  "irVersion": "1.0",
+  "workflowId": "wf_customer_crud",
+  "workflowVersion": 1,
+  "triggers": [
+    {
+      "type": "http",
+      "method": "POST",
+      "path": "/internal/customer/crud",
+      "input": {
+        "mapFrom": "body"
+      }
+    }
+  ],
+  "policies": {
+    "egress": {
+      "mode": "denyByDefault",
+      "allowConnectors": [
+        "conn_db"
+      ]
+    }
+  },
+  "contracts": {},
+  "compiledAt": "2025-12-13T14:45:28.698Z",
+  "program": [
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_router"
+    },
+    {
+      "op": "IF",
+      "cond": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "vars.op='list'"
+        }
+      },
+      "then": "L_NODE_n_list_query",
+      "else": "L_ROUTER_n_router_ELSE_1"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_ROUTER_n_router_ELSE_1"
+    },
+    {
+      "op": "IF",
+      "cond": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "vars.op='get'"
+        }
+      },
+      "then": "L_NODE_n_get_query",
+      "else": "L_ROUTER_n_router_ELSE_2"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_ROUTER_n_router_ELSE_2"
+    },
+    {
+      "op": "IF",
+      "cond": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "vars.op='create'"
+        }
+      },
+      "then": "L_NODE_n_create",
+      "else": "L_ROUTER_n_router_ELSE_3"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_ROUTER_n_router_ELSE_3"
+    },
+    {
+      "op": "IF",
+      "cond": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "vars.op='update'"
+        }
+      },
+      "then": "L_NODE_n_update",
+      "else": "L_ROUTER_n_router_ELSE_4"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_ROUTER_n_router_ELSE_4"
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_delete"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_list_query"
+    },
+    {
+      "op": "CALL",
+      "id": "n_list_query",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_db",
+        "operationId": "SelectPage"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'table':'t_customer','page': vars.page ? vars.page : 1,'pageSize': vars.pageSize ? vars.pageSize : 10,'filters': vars.filters ? vars.filters : {} } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_list_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_list_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_list_return",
+      "output": {
+        "ref": "steps.n_list_query.output.body"
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_get_query"
+    },
+    {
+      "op": "CALL",
+      "id": "n_get_query",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_db",
+        "operationId": "SelectById"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'table':'t_customer','idField':'id','id': vars.id } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_get_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_get_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_get_return",
+      "output": {
+        "ref": "steps.n_get_query.output.body"
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_create"
+    },
+    {
+      "op": "CALL",
+      "id": "n_create",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_db",
+        "operationId": "Insert"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'table':'t_customer', 'row': vars.row } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_create_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_create_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_create_return",
+      "output": {
+        "ref": "steps.n_create.output.body"
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_update"
+    },
+    {
+      "op": "CALL",
+      "id": "n_update",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_db",
+        "operationId": "UpdateById"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'table':'t_customer','idField':'id','id': vars.id, 'patch': vars.patch } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_update_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_update_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_update_return",
+      "output": {
+        "ref": "steps.n_update.output.body"
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_delete"
+    },
+    {
+      "op": "CALL",
+      "id": "n_delete",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_db",
+        "operationId": "SoftDeleteById"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'table':'t_customer','idField':'id','id': vars.id } }"
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_delete_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_delete_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_delete_return",
+      "output": {
+        "ref": "steps.n_delete.output.body"
+      }
+    }
+  ]
+}

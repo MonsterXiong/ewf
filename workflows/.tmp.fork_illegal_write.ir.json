@@ -1,0 +1,105 @@
+{
+  "kind": "ewf.ir",
+  "irVersion": "1.0",
+  "workflowId": "wf_fork_illegal_write",
+  "workflowVersion": 1,
+  "triggers": [],
+  "policies": {},
+  "contracts": {},
+  "compiledAt": "2025-12-13T17:57:21.716Z",
+  "program": [
+    {
+      "op": "LABEL",
+      "name": "L_NODE_p"
+    },
+    {
+      "op": "FORK_ALL",
+      "id": "p",
+      "mode": "parallel",
+      "branches": [
+        {
+          "name": "a",
+          "from": "L_B_p_a",
+          "to": "L_B_p_a_END"
+        },
+        {
+          "name": "b",
+          "from": "L_B_p_b",
+          "to": "L_B_p_b_END"
+        }
+      ],
+      "join": "L_NODE_n_join"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_a"
+    },
+    {
+      "op": "MERGE",
+      "id": "n_bad",
+      "into": "vars.illegal",
+      "value": {
+        "const": 1
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_a_END"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_b"
+    },
+    {
+      "op": "MERGE",
+      "id": "n_ok",
+      "into": "vars.__branch.b",
+      "value": {
+        "const": 2
+      }
+    },
+    {
+      "op": "LABEL",
+      "name": "L_B_p_b_END"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_join"
+    },
+    {
+      "op": "MERGE",
+      "id": "n_join",
+      "into": "vars._x",
+      "value": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'a': vars.__branch.a, 'b': vars.__branch.b }"
+        }
+      }
+    },
+    {
+      "op": "SET_VARS",
+      "id": "n_join_cleanup",
+      "set": {
+        "vars.__branch": {
+          "const": {}
+        }
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_return",
+      "output": {
+        "ref": "vars._x"
+      }
+    }
+  ]
+}

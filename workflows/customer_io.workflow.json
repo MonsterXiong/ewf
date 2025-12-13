@@ -1,0 +1,219 @@
+{
+  "kind": "ewf.workflow",
+  "schemaVersion": "1.0",
+  "id": "wf_customer_io",
+  "version": 1,
+  "policies": {
+    "egress": {
+      "mode": "denyByDefault",
+      "allowConnectors": [
+        "conn_db",
+        "conn_file"
+      ]
+    }
+  },
+  "triggers": [
+    {
+      "type": "http",
+      "method": "POST",
+      "path": "/internal/customer/io",
+      "input": {
+        "mapFrom": "body"
+      }
+    }
+  ],
+  "graph": {
+    "start": {
+      "nodeId": "n_router",
+      "port": "in"
+    },
+    "nodes": [
+      {
+        "id": "n_router",
+        "type": "flow.router",
+        "typeVersion": 1,
+        "inputs": {
+          "cases": {
+            "const": [
+              {
+                "when": {
+                  "expr": {
+                    "lang": "jsonata",
+                    "body": "vars.op='export'"
+                  }
+                },
+                "to": "n_select_all"
+              },
+              {
+                "when": {
+                  "expr": {
+                    "lang": "jsonata",
+                    "body": "vars.op='import'"
+                  }
+                },
+                "to": "n_parse_csv"
+              },
+              {
+                "when": {
+                  "const": true
+                },
+                "to": "n_bad_req"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "n_select_all",
+        "type": "connector.call",
+        "typeVersion": 1,
+        "inputs": {
+          "spec.connectorId": {
+            "const": "conn_db"
+          },
+          "spec.operationId": {
+            "const": "SelectAll"
+          },
+          "inputs": {
+            "expr": {
+              "lang": "jsonata",
+              "body": "{ 'body': { 'table':'t_customer' } }"
+            }
+          }
+        }
+      },
+      {
+        "id": "n_generate_csv",
+        "type": "connector.call",
+        "typeVersion": 1,
+        "inputs": {
+          "spec.connectorId": {
+            "const": "conn_file"
+          },
+          "spec.operationId": {
+            "const": "GenerateCsv"
+          },
+          "inputs": {
+            "expr": {
+              "lang": "jsonata",
+              "body": "{ 'body': { 'rows': steps.n_select_all.output.body.items } }"
+            }
+          }
+        }
+      },
+      {
+        "id": "n_export_return",
+        "type": "flow.return",
+        "typeVersion": 1,
+        "inputs": {
+          "value": {
+            "ref": "steps.n_generate_csv.output.body.csv"
+          }
+        }
+      },
+      {
+        "id": "n_parse_csv",
+        "type": "connector.call",
+        "typeVersion": 1,
+        "inputs": {
+          "spec.connectorId": {
+            "const": "conn_file"
+          },
+          "spec.operationId": {
+            "const": "ParseCsv"
+          },
+          "inputs": {
+            "expr": {
+              "lang": "jsonata",
+              "body": "{ 'body': { 'csv': vars.csv } }"
+            }
+          }
+        }
+      },
+      {
+        "id": "n_upsert_many",
+        "type": "connector.call",
+        "typeVersion": 1,
+        "inputs": {
+          "spec.connectorId": {
+            "const": "conn_db"
+          },
+          "spec.operationId": {
+            "const": "UpsertMany"
+          },
+          "inputs": {
+            "expr": {
+              "lang": "jsonata",
+              "body": "{ 'body': { 'table':'t_customer','idField':'id','rows': steps.n_parse_csv.output.body.rows } }"
+            }
+          }
+        }
+      },
+      {
+        "id": "n_import_return",
+        "type": "flow.return",
+        "typeVersion": 1,
+        "inputs": {
+          "value": {
+            "ref": "steps.n_upsert_many.output.body"
+          }
+        }
+      },
+      {
+        "id": "n_bad_req",
+        "type": "flow.return",
+        "typeVersion": 1,
+        "inputs": {
+          "value": {
+            "const": {
+              "error": "bad_request",
+              "message": "op must be 'import' or 'export'"
+            }
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": {
+          "nodeId": "n_select_all",
+          "port": "out"
+        },
+        "to": {
+          "nodeId": "n_generate_csv",
+          "port": "in"
+        }
+      },
+      {
+        "from": {
+          "nodeId": "n_generate_csv",
+          "port": "out"
+        },
+        "to": {
+          "nodeId": "n_export_return",
+          "port": "in"
+        }
+      },
+      {
+        "from": {
+          "nodeId": "n_parse_csv",
+          "port": "out"
+        },
+        "to": {
+          "nodeId": "n_upsert_many",
+          "port": "in"
+        }
+      },
+      {
+        "from": {
+          "nodeId": "n_upsert_many",
+          "port": "out"
+        },
+        "to": {
+          "nodeId": "n_import_return",
+          "port": "in"
+        }
+      }
+    ]
+  }
+}

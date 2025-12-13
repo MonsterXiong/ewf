@@ -1,0 +1,70 @@
+{
+  "kind": "ewf.ir",
+  "irVersion": "1.0",
+  "workflowId": "wf_risk_retry_demo",
+  "workflowVersion": 1,
+  "triggers": [
+    {
+      "type": "http",
+      "method": "POST",
+      "path": "/internal/risk/retry-demo",
+      "input": {
+        "mapFrom": "body"
+      }
+    }
+  ],
+  "policies": {
+    "egress": {
+      "mode": "denyByDefault",
+      "allowConnectors": [
+        "conn_risk_service"
+      ]
+    }
+  },
+  "contracts": {},
+  "compiledAt": "2025-12-13T14:45:28.962Z",
+  "program": [
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_get_risk"
+    },
+    {
+      "op": "CALL",
+      "id": "n_get_risk",
+      "spec": {
+        "type": "connector.call",
+        "connectorId": "conn_risk_service",
+        "operationId": "GetRisk"
+      },
+      "inputs": {
+        "expr": {
+          "lang": "jsonata",
+          "body": "{ 'body': { 'id': vars.id ? vars.id : 'c001' } }"
+        }
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "backoffMs": 10,
+        "backoffMultiplier": 1,
+        "retryOnStatus": [
+          503
+        ]
+      }
+    },
+    {
+      "op": "JUMP",
+      "to": "L_NODE_n_return"
+    },
+    {
+      "op": "LABEL",
+      "name": "L_NODE_n_return"
+    },
+    {
+      "op": "RETURN",
+      "id": "n_return",
+      "output": {
+        "ref": "steps.n_get_risk.output.body"
+      }
+    }
+  ]
+}

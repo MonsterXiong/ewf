@@ -1,0 +1,240 @@
+{
+  "$id": "https://ewf.local/schemas/workflow.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EWF Workflow Definition DSL v1",
+  "type": "object",
+  "required": ["kind", "schemaVersion", "id", "version", "graph"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "const": "ewf.workflow" },
+    "schemaVersion": { "type": "string", "enum": ["1.0"] },
+    "compiler": { "type": "string", "default": "plugin" },
+
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "version": { "type": "integer", "minimum": 1 },
+
+    "meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "policies": { "$ref": "#/$defs/Policies" },
+
+    "triggers": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/$defs/Trigger" }
+    },
+
+    "graph": { "$ref": "#/$defs/Graph" }
+  },
+
+  "$defs": {
+    "JsonValue": {
+      "description": "Any JSON value",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "number" },
+        { "type": "string" },
+        { "type": "array", "items": { "$ref": "#/$defs/JsonValue" } },
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/JsonValue" }
+        }
+      ]
+    },
+
+    "ValueExpr": {
+      "description": "Expression wrapper used by authoring DSL. For backward-compat, engines may also accept raw JSON values and treat them as {const:...}.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["const"],
+          "properties": {
+            "const": { "$ref": "#/$defs/JsonValue" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref"],
+          "properties": {
+            "ref": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Reference path like vars.x / steps.n1.output / env.xxx"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["expr"],
+          "properties": {
+            "expr": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["lang", "body"],
+              "properties": {
+                "lang": { "type": "string", "enum": ["jsonata"] },
+                "body": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "ValueOrExpr": {
+      "description": "Authoring input value; strict mode uses ValueExpr only; relaxed mode allows raw JSON and will be normalized to {const}.",
+      "anyOf": [
+        { "$ref": "#/$defs/ValueExpr" },
+        { "$ref": "#/$defs/JsonValue" }
+      ]
+    },
+
+    "RetryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 20, "default": 1 },
+        "backoffMs": { "type": "integer", "minimum": 0, "maximum": 600000, "default": 0 },
+        "backoffMultiplier": { "type": "number", "minimum": 1, "maximum": 10, "default": 1 },
+        "retryOnStatus": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "default": [429, 500, 502, 503, 504]
+        }
+      }
+    },
+
+    "OnErrorPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["failFast", "appendErrorAndContinue"],
+          "default": "failFast"
+        }
+      }
+    },
+
+    "Policies": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "egress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "type": "string", "enum": ["denyByDefault", "allowAll"], "default": "denyByDefault" },
+            "allowConnectors": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "default": []
+            }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxRunMs": { "type": "integer", "minimum": 1, "maximum": 3600000 },
+            "maxConcurrency": { "type": "integer", "minimum": 1, "maximum": 1000 }
+          }
+        }
+      }
+    },
+
+    "Trigger": {
+      "description": "Trigger definitions; v1 only standardizes http trigger; other trigger types may be added later.",
+      "oneOf": [
+        { "$ref": "#/$defs/HttpTrigger" }
+      ]
+    },
+
+    "HttpTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "method", "path"],
+      "properties": {
+        "type": { "const": "http" },
+        "method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "For strict publish: must start with /internal/api/"
+        }
+      }
+    },
+
+    "Graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "nodes", "edges"],
+      "properties": {
+        "start": { "$ref": "#/$defs/PortRef" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Node" },
+          "default": []
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Edge" },
+          "default": []
+        }
+      }
+    },
+
+    "Node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "typeVersion"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "type": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "typeVersion": { "type": "integer", "minimum": 1 },
+
+        "inputs": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/ValueOrExpr" },
+          "default": {}
+        },
+
+        "meta": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+
+    "Edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "$ref": "#/$defs/PortRef" },
+        "to": { "$ref": "#/$defs/PortRef" }
+      }
+    },
+
+    "PortRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodeId", "port"],
+      "properties": {
+        "nodeId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "port": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    }
+  }
+}
