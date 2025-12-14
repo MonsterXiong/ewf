@@ -26,7 +26,7 @@ import { PluginCompilerService } from "./compiler.plugin.service";
 import { DraftValidationService } from "./draft-validation.service";
 import { DraftDefaultsService } from "./draft-defaults.service";
 import { DraftNormalizeService } from "./draft-normalize.service";
-
+import { SchemaValidationService } from "../common/schema-validation.service";
 @Module({
   imports: [GeneratedModule],
   controllers: [
@@ -39,7 +39,6 @@ import { DraftNormalizeService } from "./draft-normalize.service";
   ],
   providers: [
     MySqlPoolProvider,
-
     {
       provide: WorkflowRepo,
       useFactory: (p: MySqlPoolProvider) => new WorkflowRepo(p.pool),
@@ -61,7 +60,7 @@ import { DraftNormalizeService } from "./draft-normalize.service";
     DraftValidationService,
     DraftDefaultsService,
     DraftNormalizeService, // ✅ 新增
-
+    SchemaValidationService,
     {
       provide: WorkflowService,
       useFactory: (repo: WorkflowRepo, compiler: CompilerBridge, pcs: PluginCompilerService) =>

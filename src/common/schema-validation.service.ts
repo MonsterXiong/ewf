@@ -1,6 +1,7 @@
+import { Injectable } from "@nestjs/common";
 import * as fs from "fs";
 import * as path from "path";
-import Ajv, { ErrorObject, ValidateFunction } from "ajv";
+import Ajv2020, { ErrorObject, ValidateFunction } from "ajv/dist/2020";
 import addFormats from "ajv-formats";
 
 export type SchemaError = {
@@ -19,8 +20,9 @@ function readJson(filePath: string) {
   return JSON.parse(fs.readFileSync(abs, "utf8"));
 }
 
+@Injectable()
 export class SchemaValidationService {
-  private readonly ajv: Ajv;
+  private readonly ajv: Ajv2020;
   private readonly validators = new Map<string, ValidateFunction>();
 
   private readonly workflowSchemaPath = "schemas/workflow.v1.schema.json";
@@ -28,14 +30,15 @@ export class SchemaValidationService {
   private readonly connectorRegistrySchemaPath = "schemas/connector-registry.v1.schema.json";
 
   constructor() {
-    this.ajv = new Ajv({
+    // ✅ Ajv2020: 原生支持 $schema=2020-12
+    this.ajv = new Ajv2020({
       allErrors: true,
       strict: false,
       allowUnionTypes: true
     });
     addFormats(this.ajv);
 
-    // preload
+    // preload（让启动期就发现 schema 有问题）
     this.getValidator("workflow", this.workflowSchemaPath);
     this.getValidator("stepRegistry", this.stepRegistrySchemaPath);
     this.getValidator("connectorRegistry", this.connectorRegistrySchemaPath);
